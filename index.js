@@ -8,7 +8,7 @@ var Node = {
   process: process
 };
 
-var binding = require('./build/Release/binding.node');
+var binding = require('./binding.node');
 
 function assertFunction(key, value) {
   if (typeof value !== 'function') {

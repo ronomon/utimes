@@ -2,4 +2,5 @@
 .jshintrc
 build
 node_modules
-test
+utimes_fixtures
+binding.node
