@@ -1,6 +1,6 @@
 {
   "name": "@ronomon/utimes",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Change the birth time (btime), modified time (mtime) and access time (atime) of a file.",
   "main": "index.js",
   "repository": {
