@@ -25,7 +25,6 @@
   },
   "homepage": "https://github.com/ronomon/utimes#readme",
   "scripts": {
-    "install": "node-gyp rebuild",
     "postinstall": "node-gyp clean",
     "test": "node test.js"
   },
