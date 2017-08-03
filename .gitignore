@@ -1,6 +1,5 @@
 .DS_Store
-.jshintrc
+binding.node
 build
 node_modules
 utimes_fixtures
-binding.node
