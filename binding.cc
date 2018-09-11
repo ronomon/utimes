@@ -117,7 +117,7 @@ class UtimesWorker : public Nan::AsyncWorker {
     v8::Local<v8::Value> argv[] = {
       Nan::New<v8::Number>(result)
     };
-    callback->Call(1, argv);
+    callback->Call(1, argv, async_resource);
   }
 
  private:
