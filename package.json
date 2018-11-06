@@ -3,6 +3,12 @@
   "version": "2.3.0",
   "description": "Change the birth time (btime), modified time (mtime) and access time (atime) of a file.",
   "main": "index.js",
+  "files": [
+    "binding.cc",
+    "binding.gyp",
+    "index.js",
+    "test.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ronomon/utimes.git"
