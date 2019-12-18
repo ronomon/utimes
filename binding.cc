@@ -1,4 +1,5 @@
-#include <nan.h>
+#include <napi.h>
+#include <uv.h>
 #include <stdint.h>
 #if defined(__APPLE__)
 #include <sys/attr.h>
@@ -87,22 +88,24 @@ int set_utimes(
 #endif
 }
 
-class UtimesWorker : public Nan::AsyncWorker {
+class UtimesWorker : public Napi::AsyncWorker {
  public:
   UtimesWorker(
-    v8::Local<v8::Object> &pathHandle,
+    Napi::Buffer<char> &pathHandle,
     const uint8_t flags,
     const uint64_t btime,
     const uint64_t mtime,
     const uint64_t atime,
-    Nan::Callback *callback
-  ) : Nan::AsyncWorker(callback),
+    const Napi::Function &callback
+  ) : Napi::AsyncWorker(callback),
+      pathHandleRef(Napi::ObjectReference::New(pathHandle, 1)),
+      path(pathHandle.Data()),
       flags(flags),
       btime(btime),
       mtime(mtime),
       atime(atime) {
-        SaveToPersistent("pathHandle", pathHandle);
-        path = node::Buffer::Data(pathHandle);
+        // SaveToPersistent("pathHandle", pathHandle);
+        // path = pathHandle.Data();
   }
 
   ~UtimesWorker() {}
@@ -112,15 +115,18 @@ class UtimesWorker : public Nan::AsyncWorker {
     if (result > 0) result = -result;
   }
 
-  void HandleOKCallback () {
-    Nan::HandleScope scope;
-    v8::Local<v8::Value> argv[] = {
-      Nan::New<v8::Number>(result)
-    };
-    callback->Call(1, argv, async_resource);
+  void OnOK () {
+    Napi::HandleScope scope(Env());
+
+    Callback().Call({
+      Napi::Number::New(Env(), result)
+    });
+
+    pathHandleRef.Unref();
   }
 
  private:
+  Napi::ObjectReference pathHandleRef;
   const char* path;
   const uint8_t flags;
   const uint64_t btime;
@@ -129,44 +135,50 @@ class UtimesWorker : public Nan::AsyncWorker {
   int result;
 };
 
-NAN_METHOD(utimes) {
+void utimes(const Napi::CallbackInfo& info) {
   if (
     info.Length() != 6 ||
-    !node::Buffer::HasInstance(info[0]) ||
-    !info[1]->IsUint32() ||
-    !info[2]->IsNumber() ||
-    !info[3]->IsNumber() ||
-    !info[4]->IsNumber() ||
-    !info[5]->IsFunction()
+    !info[0].IsBuffer() ||
+    !info[1].IsNumber() ||
+    !info[2].IsNumber() ||
+    !info[3].IsNumber() ||
+    !info[4].IsNumber() ||
+    !info[5].IsFunction()
   ) {
-    return Nan::ThrowError(
-      "bad arguments, expected: ("
+    throw Napi::Error::New(info.Env(), "bad arguments, expected: ("
       "buffer path, int flags, "
       "seconds btime, seconds mtime, seconds atime, "
       "function callback"
       ")"
-    );
+      );
   }
-  v8::Local<v8::Object> pathHandle = info[0].As<v8::Object>();
-  const uint8_t flags = info[1]->Uint32Value();
-  const uint64_t btime = info[2]->IntegerValue();
-  const uint64_t mtime = info[3]->IntegerValue();
-  const uint64_t atime = info[4]->IntegerValue();
-  Nan::Callback *callback = new Nan::Callback(info[5].As<v8::Function>());
-  Nan::AsyncQueueWorker(new UtimesWorker(
+
+  Napi::Buffer<char> pathHandle = info[0].As<Napi::Buffer<char>>();
+  const uint8_t flags = info[1].As<Napi::Number>().Uint32Value();
+  const uint64_t btime = info[2].As<Napi::Number>().Int64Value();
+  const uint64_t mtime = info[3].As<Napi::Number>().Int64Value();
+  const uint64_t atime = info[4].As<Napi::Number>().Int64Value();
+  Napi::Function callback = info[5].As<Napi::Function>();
+
+  UtimesWorker *worker = new UtimesWorker(
     pathHandle,
     flags,
     btime,
     mtime,
     atime,
     callback
-  ));
+  );
+  worker->Queue();
 }
 
-NAN_MODULE_INIT(Init) {
-  NAN_EXPORT(target, utimes);
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  exports.Set(
+    Napi::String::New(env, "utimes"),
+    Napi::Function::New(env, utimes)
+  );
+  return exports;
 }
 
-NODE_MODULE(binding, Init)
+NODE_API_MODULE(NODE_GYP_MODULE_NAME, Init)
 
 // S.D.G.
